@@ -1,12 +1,13 @@
-#include <stdio.h>
+#include <iostream>
+#include <string>
 #include <stdlib.h>
 
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
-		fprintf(stderr, "Error: missing port\n");
+		std::cerr << "Error: missing port" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	int port = atoi(argv[1]);
-	printf("PORT: %d", port);
+	std::cerr << "PORT: " << port << std::endl;
 	return 0;
 }
