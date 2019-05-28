@@ -10,6 +10,13 @@
 #define HEADER_LEN 12
 #define MAX_SEQUENCE_NUM 25600  
 
+void signal_handler(int signum) {
+	std::cerr << "PLACEHOLDER: Received signal " << signum << std::endl;
+	// TODO: Log INTERRUPT to file
+
+	exit(0);
+}
+
 int main(int argc, char *argv[]) {
 	// Parse command-line argument for port number
 	if (argc < 2) {
@@ -35,6 +42,8 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	signal(SIGQUIT, signal_handler); // To test: CTRL-BACKSLASH
+	signal(SIGTERM, signal_handler); // To test: Send SIGTERM via htop
 	char buf[MAX_PACKET_SIZE];
 	// Note: No need to call listen(2); UDP is connectionless
 	while (true) {
