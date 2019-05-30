@@ -46,3 +46,15 @@ Packet Packet::CreatePacketFromBuffer(char *packet_buffer, int packet_size) {
 char * Packet::GetPayload() {
     return payload;
 }
+
+bool isValidACK() {
+    return (bool) hdr.FlagACK;
+}
+
+bool getSYN() {
+    return (bool) hdr.FlagSYN;
+}
+
+bool getFIN() {
+    return (bool) hdr.FlagFIN;
+}

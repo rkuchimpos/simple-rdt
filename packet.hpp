@@ -28,6 +28,9 @@ class Packet {
         char * AssemblePacketBuffer();
         static Packet CreatePacketFromBuffer(char *packet_buffer, int packet_size);
         char * GetPayload();
+        bool isValidACK();
+        bool getSYN();
+        bool getFIN();
 };
 
 #endif
