@@ -47,22 +47,22 @@ char * Packet::GetPayload() {
     return payload;
 }
 
-bool isValidACK() {
+bool Packet::isValidACK() {
     return (bool) hdr.FlagACK;
 }
 
-bool getSYN() {
+bool Packet::getSYN() {
     return (bool) hdr.FlagSYN;
 }
 
-bool getFIN() {
+bool Packet::getFIN() {
     return (bool) hdr.FlagFIN;
 }
 
-unsigned short getSequenceNum() {
+unsigned short Packet::getSequenceNum() {
     return hdr.SequenceNum;
 }
 
-unsigned short getACKnum() {
+unsigned short Packet::getACKnum() {
     return hdr.ACKNum;
 }

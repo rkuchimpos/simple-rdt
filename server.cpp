@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include <iostream>
 #include <string>
@@ -61,12 +62,18 @@ int main(int argc, char *argv[]) {
 	int file_no = 0;
 	int packet_no = 0;
 
+	// generate random seed
+	srand(time(NULL));
+
 	while (true) {
 		ssize_t n = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
 		if (n > 0) {
 			Packet p = Packet::CreatePacketFromBuffer(buf, n);
 
-			// if SYN flag set
+			// create general packet to send
+			Packet s = Packet(p.getACKNum(), p.getSequenceNum() + n - HEADER_LEN, 1, 0, 0, NULL, 0);
+
+			// if SYN flag set (new connection)
 			if (p.getSYN()) {
 				// create new file
 				file_no++;
@@ -74,14 +81,17 @@ int main(int argc, char *argv[]) {
 				string filename;
 				sprintf(filename, "%d.file", file_no);
 				f.open(filename);
+
+				// update s
+				s = Packet(rand() % (MAX_SEQUENCE_NUM + 1), p.getSequenceNum() + 1, 1, 1, 0, NULL, 0);
 			}
 
 			packet_no++;
 
 			// redirect contents of packet to file buffer
-			buf.copy(file_buf, n, (packet_no-1) * MAX_PAYLOAD_SIZE);
+			memcpy(&file_buf[(packet_no - 1) * MAX_PAYLOAD_SIZE], p.GetPayload(), n - HEADER_LEN);
 
-			// if FIN flag set
+			// if FIN flag set (final connection)
 			if (p.getFIN()) {
 				f << file_buf;
 				f.close();
