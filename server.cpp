@@ -96,6 +96,9 @@ int main(int argc, char *argv[]) {
 				f << file_buf;
 				f.close();
 			}
+
+			// return message
+			sendto(fd_sock, s.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, &client_addr_len);
 		}
 	}
 
