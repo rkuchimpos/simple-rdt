@@ -63,6 +63,6 @@ unsigned short Packet::getSequenceNum() {
     return hdr.SequenceNum;
 }
 
-unsigned short Packet::getACKnum() {
+unsigned short Packet::getACKNum() {
     return hdr.ACKNum;
 }

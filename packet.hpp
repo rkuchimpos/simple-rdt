@@ -32,7 +32,7 @@ class Packet {
         bool getSYN();
         bool getFIN();
         unsigned short getSequenceNum();
-        unsigned short getACKnum();
+        unsigned short getACKNum();
 };
 
 #endif

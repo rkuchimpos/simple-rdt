@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 				// create new file
 				file_no++;
 				packet_no = 0;
-				string filename;
+				char *filename;
 				sprintf(filename, "%d.file", file_no);
 				f.open(filename);
 
