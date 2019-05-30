@@ -64,10 +64,11 @@ int main(int argc, char *argv[]) {
 	while (true) {
 		ssize_t n = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
 		if (n > 0) {
-			Packet p = CreatePacketFromBuffer(buf, n);
+			Packet p = Packet::CreatePacketFromBuffer(buf, n);
 
 			// if SYN flag set
 			if (p.getSYN()) {
+				// create new file
 				file_no++;
 				packet_no = 0;
 				string filename;
@@ -76,9 +77,6 @@ int main(int argc, char *argv[]) {
 			}
 
 			packet_no++;
-
-			buf[n] = 0;
-			cout << "Received message: " << buf << endl;
 
 			// redirect contents of packet to file buffer
 			buf.copy(file_buf, n, (packet_no-1) * MAX_PAYLOAD_SIZE);

@@ -31,6 +31,8 @@ class Packet {
         bool isValidACK();
         bool getSYN();
         bool getFIN();
+        unsigned short getSequenceNum();
+        unsigned short getACKnum();
 };
 
 #endif

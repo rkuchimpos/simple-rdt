@@ -58,3 +58,11 @@ bool getSYN() {
 bool getFIN() {
     return (bool) hdr.FlagFIN;
 }
+
+unsigned short getSequenceNum() {
+    return hdr.SequenceNum;
+}
+
+unsigned short getACKnum() {
+    return hdr.ACKNum;
+}
