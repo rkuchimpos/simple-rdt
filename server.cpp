@@ -16,6 +16,7 @@ using namespace std;
 #define HEADER_LEN 12
 #define MAX_SEQUENCE_NUM 25600
 #define MAX_FILE_SIZE 100000000
+#define MAX_FILENAME_SIZE 256
 
 ofstream f;
 
@@ -45,6 +46,7 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
 	memset(&server_addr, 0, sizeof(server_addr));
+	memset(&client_addr, 0, sizeof(client_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(port);
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]) {
 	signal(SIGQUIT, signal_handler); // To test: CTRL-BACKSLASH
 	signal(SIGTERM, signal_handler); // To test: Send SIGTERM via htop
 	char buf[MAX_PACKET_SIZE];
-	char file_buf[MAX_FILE_SIZE];
+	char *file_buf = (char *)malloc(MAX_FILE_SIZE);
 
 	// Note: No need to call listen(2); UDP is connectionless
 	int file_no = 0;
@@ -78,7 +80,7 @@ int main(int argc, char *argv[]) {
 				// create new file
 				file_no++;
 				packet_no = 0;
-				char *filename;
+				char filename[MAX_FILENAME_SIZE];
 				sprintf(filename, "%d.file", file_no);
 				f.open(filename);
 
@@ -98,7 +100,8 @@ int main(int argc, char *argv[]) {
 			}
 
 			// return message
-			sendto(fd_sock, s.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, &client_addr_len);
+			sendto(fd_sock, s.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
+			cout << s.getSequenceNum() << endl;
 		}
 	}
 
