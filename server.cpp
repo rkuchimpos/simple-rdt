@@ -84,13 +84,13 @@ int main(int argc, char *argv[]) {
 				sprintf(filename, "%d.file", file_no);
 				f.open(filename);
 
-				// update s
+				// create SYNACK packet
 				s = Packet(rand() % (MAX_SEQUENCE_NUM + 1), p.getSequenceNum() + 1, 1, 1, 0, NULL, 0);
 			}
 
 			packet_no++;
 
-			// redirect contents of packet to file buffer
+			// redirect payload of packet to file buffer
 			memcpy(&file_buf[(packet_no - 1) * MAX_PAYLOAD_SIZE], p.GetPayload(), n - HEADER_LEN);
 
 			// if FIN flag set (final connection)

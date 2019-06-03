@@ -12,6 +12,7 @@ Packet::~Packet() {
     }
 }
 
+// TODO: use bit map to implement flags
 Packet::Packet(unsigned short seq_num, unsigned short ack_num, unsigned char flag_ack, unsigned char flag_syn, unsigned char flag_fin, char *payload, int payload_size) {
     hdr.SequenceNum = seq_num;
     hdr.ACKNum = ack_num;
