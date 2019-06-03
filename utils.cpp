@@ -4,11 +4,11 @@ using namespace std;
 
 // label: "RECV" or "SEND"
 void Utils::DumpPacketInfo(std::string label, Packet *pkt, int cwnd, int sstresh, bool dup_sent) {
-    if (pkt == nullptr) {
-        return;
-    }
+	if (pkt == nullptr) {
+		return;
+	}
 
-    cout << label;
+	cout << label;
 	cout << " " << pkt->getSequenceNum() << " " << pkt->getACKNum();
 	cout << " " << cwnd << " " << sstresh;
 	if (pkt->isValidACK()) {
@@ -20,8 +20,8 @@ void Utils::DumpPacketInfo(std::string label, Packet *pkt, int cwnd, int sstresh
 	if (pkt->getFIN()) {
 		cout << " " << "FIN";
 	}
-    if (dup_sent) {
-        cout << " " << "DUP"; 
-    }
+	if (dup_sent) {
+		cout << " " << "DUP"; 
+	}
 	cout << endl;
 }
