@@ -8,6 +8,7 @@
 #include <string>
 #include <fstream>
 #include "packet.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -70,13 +71,10 @@ int main(int argc, char *argv[]) {
 	while (true) {
 		ssize_t n = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
 		if (n > 0) {
-			Packet p = Packet::CreatePacketFromBuffer(buf, n);
-
-			// create general packet to send
-			Packet s = Packet(p.getACKNum(), p.getSequenceNum() + n - HEADER_LEN, FLAG_ACK, NULL, 0);
-
+			Packet pkt = Packet::CreatePacketFromBuffer(buf, n);
+			Utils::DumpPacketInfo("RECV", &pkt, 0, 0, false);
 			// if SYN flag set (new connection)
-			if (p.getSYN()) {
+			if (pkt.getSYN()) {
 				// create new file
 				file_no++;
 				packet_no = 0;
@@ -84,24 +82,32 @@ int main(int argc, char *argv[]) {
 				sprintf(filename, "%d.file", file_no);
 				f.open(filename);
 
-				// create SYNACK packet
-				s = Packet(rand() % (MAX_SEQUENCE_NUM + 1), p.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
-			}
-
-			packet_no++;
-
-			// redirect payload of packet to file buffer
-			memcpy(&file_buf[(packet_no - 1) * MAX_PAYLOAD_SIZE], p.GetPayload(), n - HEADER_LEN);
-
-			// if FIN flag set (final connection)
-			if (p.getFIN()) {
+				// create and send SYNACK packet
+				Packet pkt_synack = Packet(rand() % (MAX_SEQUENCE_NUM + 1), pkt.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
+				ssize_t n = sendto(fd_sock, pkt_synack.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
+				if (n == -1) {
+					cerr << "ERROR: Unable to send packet" << endl;
+				}
+				Utils::DumpPacketInfo("SEND", &pkt_synack, 0, 0, false);
+			} else if (pkt.getFIN()) {
 				f << file_buf;
 				f.close();
+			} else {
+				// A regular packet, possibly with a payload
+
+				// redirect payload of packet to file buffer
+				packet_no++;
+				memcpy(&file_buf[(packet_no - 1) * MAX_PAYLOAD_SIZE], pkt.GetPayload(), n - HEADER_LEN);
+
+				// TEST:
+				cout << "Payload size: " << n - HEADER_LEN << endl;
+				char test_payload[MAX_PAYLOAD_SIZE];
+				memcpy(test_payload, pkt.GetPayload(), n - HEADER_LEN);
+				test_payload[n - HEADER_LEN] = 0;
+				cout << "Test payload: " << test_payload << endl;
 			}
 
-			// return message
-			sendto(fd_sock, s.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
-			cout << s.getSequenceNum() << endl;
+
 		}
 	}
 

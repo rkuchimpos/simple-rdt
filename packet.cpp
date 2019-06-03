@@ -8,7 +8,8 @@ Packet::Packet() {
 
 Packet::~Packet() {
     if (payload != nullptr) {
-        free(payload);
+        // TODO: Handle pointer management
+        //free(payload);
     }
 }
 

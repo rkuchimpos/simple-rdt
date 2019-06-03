@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "packet.hpp"
+#include "utils.hpp"
 
 int main(int argc, char *argv[]) {
 	if (argc < 4) {
@@ -44,11 +45,13 @@ int main(int argc, char *argv[]) {
 	if (n_sent == -1) {
 		std::cerr << "ERROR: Unable to send packet" << std::endl;
 	}
+	Utils::DumpPacketInfo("SEND", &pkt_syn, 0, 0, false);
 	// Expect SYNACK packet from server
 	Packet pkt_synack;
 	while (true) {
 		ssize_t n_recvd = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&server_addr, &server_addr_len);
 		pkt_synack = Packet::CreatePacketFromBuffer(buf, n_recvd);
+		Utils::DumpPacketInfo("RECV", &pkt_synack, 0, 0, false);
 		// Check if SYNACK packet was received
 		if (pkt_synack.getSYN() && pkt_synack.isValidACK()) {
 			break;
@@ -57,10 +60,11 @@ int main(int argc, char *argv[]) {
 	// Once we received a SYNACK packet from the server, we can respond with an ACK
 	// and start transmitting the first part of the file.
 	Packet pkt = Packet(++seq_num, pkt_synack.getACKNum() + 1, FLAG_ACK, "LO", strlen("LO")); // test packet
-	n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&server_addr, server_addr_len);
+	n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + strlen("LO"), 0, (struct sockaddr *)&server_addr, server_addr_len);
 	if (n_sent == -1) {
 		std::cerr << "ERROR: Unable to send packet" << std::endl;
 	}
+	Utils::DumpPacketInfo("SEND", &pkt, 0, 0, false);
 
 	return 0;
 }
