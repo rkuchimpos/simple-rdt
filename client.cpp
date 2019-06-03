@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 	srand(time(NULL));
 	int seq_num = rand() % (MAX_SEQUENCE_NUM + 1);
 	// Initiate connection with a three-way handshake
-	Packet pkt_syn = Packet(seq_num, 0, 0, 1, 0, NULL, 0);
+	Packet pkt_syn = Packet(seq_num, 0, FLAG_SYN, NULL, 0);
 	// Send SYN packet
 	ssize_t n_sent = sendto(fd_sock, pkt_syn.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&server_addr, server_addr_len);
 	if (n_sent == -1) {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 	}
 	// Once we received a SYNACK packet from the server, we can respond with an ACK
 	// and start transmitting the first part of the file.
-	Packet pkt = Packet(++seq_num, pkt_synack.getACKNum() + 1, 1, 0, 0, "LO", strlen("LO")); // test packet
+	Packet pkt = Packet(++seq_num, pkt_synack.getACKNum() + 1, FLAG_ACK, "LO", strlen("LO")); // test packet
 	n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&server_addr, server_addr_len);
 	if (n_sent == -1) {
 		std::cerr << "ERROR: Unable to send packet" << std::endl;

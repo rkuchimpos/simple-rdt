@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 			Packet p = Packet::CreatePacketFromBuffer(buf, n);
 
 			// create general packet to send
-			Packet s = Packet(p.getACKNum(), p.getSequenceNum() + n - HEADER_LEN, 1, 0, 0, NULL, 0);
+			Packet s = Packet(p.getACKNum(), p.getSequenceNum() + n - HEADER_LEN, FLAG_ACK, NULL, 0);
 
 			// if SYN flag set (new connection)
 			if (p.getSYN()) {
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 				f.open(filename);
 
 				// create SYNACK packet
-				s = Packet(rand() % (MAX_SEQUENCE_NUM + 1), p.getSequenceNum() + 1, 1, 1, 0, NULL, 0);
+				s = Packet(rand() % (MAX_SEQUENCE_NUM + 1), p.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
 			}
 
 			packet_no++;

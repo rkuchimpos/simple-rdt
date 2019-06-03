@@ -12,14 +12,11 @@ Packet::~Packet() {
     }
 }
 
-// TODO: use bit map to implement flags
-Packet::Packet(unsigned short seq_num, unsigned short ack_num, unsigned char flag_ack, unsigned char flag_syn, unsigned char flag_fin, char *payload, int payload_size) {
+Packet::Packet(unsigned short seq_num, unsigned short ack_num, unsigned char flags, char *payload, int payload_size) {
     hdr.SequenceNum = seq_num;
     hdr.ACKNum = ack_num;
-    hdr.FlagACK = flag_ack;
-    hdr.FlagSYN = flag_syn;
-    hdr.FlagFIN = flag_fin;
-    memset(hdr._Gap, 0, 4);
+    hdr.Flags = flags;
+    memset(hdr._Gap, 0, HEADER_PADDING);
     this->payload = (char *)malloc(payload_size);
     this->payload_size = payload_size;
     memcpy(this->payload, payload, payload_size);
@@ -49,15 +46,15 @@ char * Packet::GetPayload() {
 }
 
 bool Packet::isValidACK() {
-    return (bool) hdr.FlagACK;
+    return (bool)(hdr.Flags & FLAG_ACK);
 }
 
 bool Packet::getSYN() {
-    return (bool) hdr.FlagSYN;
+    return (bool)(hdr.Flags & FLAG_SYN);
 }
 
 bool Packet::getFIN() {
-    return (bool) hdr.FlagFIN;
+    return (bool)(hdr.Flags & FLAG_FIN);
 }
 
 unsigned short Packet::getSequenceNum() {
