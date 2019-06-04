@@ -2,6 +2,7 @@
 #define _PACKET_
 
 #define MAX_PACKET_SIZE 524
+#define MAX_PAYLOAD_SIZE 512
 #define HEADER_LEN 12
 #define HEADER_PADDING 6
 #define MAX_SEQUENCE_NUM 25600  

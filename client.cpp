@@ -1,8 +1,9 @@
-#include <stdlib.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "packet.hpp"
@@ -59,12 +60,24 @@ int main(int argc, char *argv[]) {
 	}
 	// Once we received a SYNACK packet from the server, we can respond with an ACK
 	// and start transmitting the first part of the file.
-	Packet pkt = Packet(++seq_num, pkt_synack.getACKNum() + 1, FLAG_ACK, "LO", strlen("LO")); // test packet
-	n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + strlen("LO"), 0, (struct sockaddr *)&server_addr, server_addr_len);
-	if (n_sent == -1) {
-		std::cerr << "ERROR: Unable to send packet" << std::endl;
+	
+	// Break up the file into byte chunks to wrap in a packet
+	std::ifstream infile;
+	infile.open(filename, std::ios::in | std::ios::binary);
+	char payload[MAX_PAYLOAD_SIZE];
+
+	// Send at most 512 bytes of payload at a time
+	while (infile.peek() != EOF) {
+		infile.read(payload, MAX_PAYLOAD_SIZE);
+		std::streamsize payload_size = infile.gcount();
+		Packet pkt = Packet(seq_num, 0, FLAG_ACK, payload, payload_size);
+		n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + payload_size, 0, (struct sockaddr *)&server_addr, server_addr_len);
+		if (n_sent == -1) {
+			std::cerr << "ERROR: Unable to send packet" << std::endl;
+		}
+		Utils::DumpPacketInfo("SEND", &pkt, 0, 0, false);
 	}
-	Utils::DumpPacketInfo("SEND", &pkt, 0, 0, false);
+	infile.close();
 
 	return 0;
 }
