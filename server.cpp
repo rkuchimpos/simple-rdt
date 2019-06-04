@@ -123,6 +123,10 @@ int main(int argc, char *argv[]) {
 				// while the client connection is alive (no ACK pkt received)
 				do {
 					ssize_t bytes_sent = sendto(fd_sock, pkt_fin.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
+					if (bytes_sent == -1) {
+						cerr << "ERROR: Unable to send packet" << endl;
+					}
+					Utils::DumpPacketInfo("SEND", &pkt_send, 0, 0, false);
 				} while ((fin_bytes = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len)) < 0);
 			}
 		}
