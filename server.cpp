@@ -93,6 +93,13 @@ int main(int argc, char *argv[]) {
 				// A regular packet, possibly with a payload
 				if (pkt.getPayloadSize() == 0) {
 					// when client confirms server's SYNACK with no payload
+					// send ACK
+					Packet pkt_send = Packet(pkt.getACKNum(), pkt.getSequenceNum() + 1, FLAG_ACK, NULL, 0);
+					ssize_t bytes_sent = sendto(fd_sock, pkt_send.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
+					if (bytes_sent == -1) {
+						cerr << "ERROR: Unable to send packet" << endl;
+					}
+					Utils::DumpPacketInfo("SEND", &pkt_send, 0, 0, false);
 				} else {
 					// redirect payload of packet to file buffer
 					memcpy(file_buf, pkt.GetPayload(), bytes_rec - HEADER_LEN);
