@@ -36,6 +36,7 @@ class Packet {
         bool getFIN();
         unsigned short getSequenceNum();
         unsigned short getACKNum();
+        int GetPayloadSize();
 };
 
 #endif

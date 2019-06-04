@@ -40,7 +40,7 @@ Packet Packet::CreatePacketFromBuffer(char *packet_buffer, int packet_size) {
     int payload_size = packet_size - HEADER_LEN;
     packet.payload = (char *) malloc(payload_size);
     memcpy(packet.payload, &packet_buffer[HEADER_LEN], packet_size - HEADER_LEN);
-    memcpy(&(packet.payload_size), payload_size, sizeof(payload_size));
+    memcpy(&(packet.payload_size), &payload_size, sizeof(payload_size));
 
     return packet;
 }

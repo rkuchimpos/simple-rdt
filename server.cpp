@@ -20,11 +20,11 @@ char filename[MAX_FILENAME_SIZE];
 void signal_handler(int signum) {
 	cerr << "PLACEHOLDER: Received signal " << signum << endl;
 
-	char *iterrupt_msg = "INTERRUPT";
+	char *interrupt_msg = "INTERRUPT";
 	// Log INTERRUPT to file
 	freopen(filename, "w+", f);
 	fwrite(interrupt_msg, 1, 9, f);
-	f.close();
+	fclose(f);
 	exit(0);
 }
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 				// create new file
 				file_no++;
 				sprintf(filename, "%d.file", file_no);
-				f.fopen(filename, "w+");
+				fopen(filename, "w+");
 
 				// create and send SYNACK packet
 				Packet pkt_synack = Packet(rand() % (MAX_SEQUENCE_NUM + 1), pkt.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 				Utils::DumpPacketInfo("SEND", &pkt_synack, 0, 0, false);
 			} else {
 				// A regular packet, possibly with a payload
-				if (pkt.getPayloadSize() == 0) {
+				if (pkt.GetPayloadSize() == 0) {
 					// when client confirms server's SYNACK with no payload
 					// send ACK
 					Packet pkt_send = Packet(pkt.getACKNum(), pkt.getSequenceNum() + 1, FLAG_ACK, NULL, 0);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (pkt.getFIN()) {
-				f.close();
+				fclose(f);
 				Packet pkt_fin = Packet(pkt.getACKNum(), 0, FLAG_FIN, NULL, 0);
 
 				ssize_t fin_bytes;
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
 					if (bytes_sent == -1) {
 						cerr << "ERROR: Unable to send packet" << endl;
 					}
-					Utils::DumpPacketInfo("SEND", &pkt_send, 0, 0, false);
+					Utils::DumpPacketInfo("SEND", &pkt_fin, 0, 0, false);
 				} while ((fin_bytes = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len)) < 0);
 			}
 		}
