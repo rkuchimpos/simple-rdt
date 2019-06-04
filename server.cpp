@@ -12,10 +12,6 @@
 
 using namespace std;
 
-#define MAX_PACKET_SIZE 524
-#define MAX_PAYLOAD_SIZE 512
-#define HEADER_LEN 12
-#define MAX_SEQUENCE_NUM 25600
 #define MAX_FILE_SIZE 100000000
 #define MAX_FILENAME_SIZE 256
 
