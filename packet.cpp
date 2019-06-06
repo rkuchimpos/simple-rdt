@@ -1,6 +1,7 @@
 #include "packet.hpp"
 #include <algorithm>
 #include <iostream>
+#include <cstring>
 
 Packet::Packet() {
     payload = nullptr;
@@ -14,8 +15,8 @@ Packet::~Packet() {
 }
 
 Packet::Packet(unsigned short seq_num, unsigned short ack_num, unsigned char flags, char *payload, int payload_size) {
-    hdr.SequenceNum = seq_num;
-    hdr.ACKNum = ack_num;
+    hdr.SequenceNum = seq_num % (MAX_SEQUENCE_NUM + 1);
+    hdr.ACKNum = ack_num % (MAX_SEQUENCE_NUM + 1);
     hdr.Flags = flags;
     memset(hdr._Gap, 0, HEADER_PADDING);
     this->payload = (char *)malloc(payload_size);
