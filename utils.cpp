@@ -25,3 +25,7 @@ void Utils::DumpPacketInfo(std::string label, Packet *pkt, int cwnd, int sstresh
 	}
 	cout << endl;
 }
+
+double Utils::GetSecondsElapsed(clock_t begin, clock_t end) {
+	return (double)(end - begin) / CLOCKS_PER_SEC;
+}
