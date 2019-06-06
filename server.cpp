@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 					}
 					Utils::DumpPacketInfo("SEND", &pkt_send, 0, 0, false);
 
-					expected_sequence_num = (pkt.getSequenceNum + 1) % (MAX_SEQUENCE_NUM + 1);
+					expected_sequence_num = (pkt.getSequenceNum() + 1) % (MAX_SEQUENCE_NUM + 1);
 				} else { // there is payload
 					// redirect payload of packet to file buffer
 					memcpy(file_buf, pkt.GetPayload(), bytes_rec - HEADER_LEN);
@@ -149,18 +149,9 @@ int main(int argc, char *argv[]) {
 					Utils::DumpPacketInfo("SEND", &pkt_send, 0, 0, false);
 
 					pkt_dup = pkt_send;
-					expected_sequence_num = (pkt.getSequenceNum + bytes_rec - HEADER_LEN) % (MAX_SEQUENCE_NUM + 1);
+					expected_sequence_num = (pkt.getSequenceNum() + bytes_rec - HEADER_LEN) % (MAX_SEQUENCE_NUM + 1);
 					// current_sequence_num stays the same
 				}
-
-					/*
-					// TEST:
-					cout << "Payload size: " << bytes_rec - HEADER_LEN << endl;
-					char test_payload[MAX_PAYLOAD_SIZE];
-					memcpy(test_payload, pkt.GetPayload(), bytes_rec - HEADER_LEN);
-					test_payload[bytes_rec - HEADER_LEN] = 0;
-					cout << "Test payload: " << test_payload << endl;
-					*/
 			}
 
 			if (pkt.getFIN()) {
@@ -171,12 +162,12 @@ int main(int argc, char *argv[]) {
 				clock_t time_elapsed;
 
 				// to force sending right away
-				start_t = clock() - (0.5 * CLOCKS_PER_SEC);
+				start_t = clock() - (0.5 * (double) CLOCKS_PER_SEC);
 
 				// while the client connection is alive (no ACK pkt received)
 				do {
 					// wait for timeout before resending packet
-					time_elapsed = (double) (clock() - start_t) / CLOCKS_PER_SEC;
+					time_elapsed = (double) (clock() - start_t) / (double) CLOCKS_PER_SEC;
 					if (time_elapsed > 0.5) {
 						ssize_t bytes_sent = sendto(fd_sock, pkt_fin.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
 						if (bytes_sent == -1) {
