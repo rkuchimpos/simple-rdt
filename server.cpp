@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
 					// create new file
 					file_no++;
 					sprintf(filename, "%d.file", file_no);
-					fopen(filename, "w+");
+					f = fopen(filename, "w+");
 
 					current_sequence_num = (current_sequence_num + 1) % (MAX_SEQUENCE_NUM + 1);
 				}
