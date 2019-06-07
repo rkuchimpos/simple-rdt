@@ -75,9 +75,15 @@ int main(int argc, char *argv[]) {
 	// generate random seed
 	srand(time(NULL));
 
+	// to prevent infinite fin loop
+	bool dup_fin = false;
+
 	while (true) {
 		// bytes_rec includes header
-		ssize_t bytes_rec = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
+		if (!dup_fin) {
+			ssize_t bytes_rec = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
+		}
+
 		if (bytes_rec > 0) {
 			Packet pkt = Packet::CreatePacketFromBuffer(buf, bytes_rec);
 			Utils::DumpPacketInfo("RECV", &pkt, 0, 0, false);
@@ -176,6 +182,8 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (pkt.getFIN()) {
+				dup_fin = false;
+
 				if (f != NULL) {
 					fclose(f);
 				}
@@ -208,6 +216,9 @@ int main(int argc, char *argv[]) {
 						Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, fin_bytes);
 						if (pkt_ack.getSequenceNum() == expected_sequence_num && pkt_ack.getACKNum() == current_sequence_num + 1) {
 							Utils::DumpPacketInfo("RECV", &pkt_ack, 0, 0, false);
+							break;
+						} else if (pkt_ack.getFIN()) { // we were stuck in infinite loop because of lost ack to fin
+							dup_fin = true;
 							break;
 						}
 					}
