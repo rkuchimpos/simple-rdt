@@ -22,10 +22,9 @@ char filename[MAX_FILENAME_SIZE];
 void signal_handler(int signum) {
 	cerr << "PLACEHOLDER: Received signal " << signum << endl;
 
-	char *interrupt_msg = "INTERRUPT";
 	// Log INTERRUPT to file
 	freopen(filename, "w+", f);
-	fwrite(interrupt_msg, 1, 9, f);
+	fwrite("INTERRUPT", 1, 9, f);
 	fclose(f);
 	exit(0);
 }
@@ -86,7 +85,7 @@ int main(int argc, char *argv[]) {
 			// if SYN flag set (new connection)
 			if (pkt.getSYN()) {
 				// create and send SYNACK packet
-				Packet pkt_synack = Packet(rand() % (MAX_SEQUENCE_NUM + 1), pkt.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
+				Packet pkt_synack = Packet(17809/*rand() % (MAX_SEQUENCE_NUM + 1)*/, pkt.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
 				ssize_t bytes_sent = sendto(fd_sock, pkt_synack.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
 				if (bytes_sent == -1) {
 					cerr << "ERROR: Unable to send packet" << endl;
@@ -110,7 +109,7 @@ int main(int argc, char *argv[]) {
 					f = fopen(filename, "w+");
 
 					// for no payload
-					// current_sequence_num = (current_sequence_num + 1) % (MAX_SEQUENCE_NUM + 1);
+					current_sequence_num = (current_sequence_num + 1) % (MAX_SEQUENCE_NUM + 1);
 
 					// for payload
 					// redirect payload of packet to file buffer
@@ -208,7 +207,7 @@ int main(int argc, char *argv[]) {
 					} else {
 						Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, fin_bytes);
 						if (pkt_ack.getSequenceNum() == expected_sequence_num && pkt_ack.getACKNum() == current_sequence_num + 1) {
-							Utils::DumpPacketInfo("RECV", &pkt, 0, 0, false);
+							Utils::DumpPacketInfo("RECV", &pkt_ack, 0, 0, false);
 							break;
 						}
 					}

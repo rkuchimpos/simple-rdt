@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 	int server_seq_num = 0;
 	int server_ack_num = 0;
 	srand(time(NULL));
-	int client_seq_num = rand() % (MAX_SEQUENCE_NUM + 1);
+	int client_seq_num = 7859; //rand() % (MAX_SEQUENCE_NUM + 1);
 	
 	char buf[MAX_PACKET_SIZE]; // Buffer for incoming data
 
@@ -144,82 +144,107 @@ int main(int argc, char *argv[]) {
 	infile.open(filename, std::ios::in | std::ios::binary);
 	char payload[MAX_PAYLOAD_SIZE];
 
-	int bytes_sent = 0;
+	infile.seekg(0, std::ios::end);
+	int file_size = infile.tellg();
+
+	int packets_remaining = std::ceil((double)file_size / MAX_PAYLOAD_SIZE);
+	infile.seekg(0, std::ios::beg);
+	int bytes_sent = 0; // Number of bytes sent successfully
 	int next_seq_num = server_ack_num;
 	int send_base = server_ack_num; // Sequence number of the oldest unacked byte
 	bool first_payload_sent = false;
+	int outgoing_packets = 0;
+	bool expect_wraparound = false;
+	std::stack <int> wraparound;
+	bool rto_timer_running = false;
+	bool lost_packet = false;
+	while (packets_remaining > 0) {
+		// Check for socket timeout (10 seconds)
+		double elapsed_sto = Utils::GetSecondsElapsed(sto_start_time, clock());
+		if (elapsed_sto >= SOCKET_TIMEOUT_SEC) {
+			std::cerr << "ERROR: Socket timeout" << std::endl;
+			close(fd_sock);
+			exit(EXIT_FAILURE);
+		}
 
-	std::stack <int> s;
-	while (infile.peek() != EOF) { // While there is more data to send (including retransmissions) 
-		int packets_to_send = std::ceil(cwnd / MAX_PAYLOAD_SIZE);
-		int packets_sent = 0;
-		int packets_ackd = 0;
-		bool expect_wraparound = false;
-
-		// Send a maximum of `packets_to_send` number of packets
-		bool rto_timer_running = false;
-		for (int i = 0; i < packets_to_send; ++i) {
-			if (infile.peek() != EOF) {
-				infile.read(payload, MAX_PAYLOAD_SIZE);
-				std::streamsize payload_size = infile.gcount();
-				Packet pkt = Packet(next_seq_num, first_payload_sent ? 0: ++server_seq_num, first_payload_sent ? 0 : FLAG_ACK, payload, payload_size);
-				n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + payload_size, 0, (struct sockaddr *)&server_addr, server_addr_len);
-				if (n_sent == -1) {
-					std::cerr << "ERROR: Unable to send packet" << std::endl;
+		// Check if ACK received
+		bool ack_received = false;
+		ssize_t n_recvd = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, MSG_DONTWAIT, (struct sockaddr *)&server_addr, &server_addr_len);
+		if (n_recvd > 0) {
+			sto_start_time = clock();
+			Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
+			Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
+			if (pkt_ack.isValidACK() && (expect_wraparound || pkt_ack.getACKNum() > send_base)) {
+				int prev_bytes_sent = bytes_sent;
+				bytes_sent += modulus25601((pkt_ack.getACKNum() - send_base));
+				int packets_ackd = std::ceil((double)(bytes_sent - prev_bytes_sent) / MAX_PAYLOAD_SIZE);
+				outgoing_packets -= packets_ackd;
+				packets_remaining -= packets_ackd;
+				if (pkt_ack.getACKNum() < send_base && pkt_ack.getACKNum() == wraparound.top()) {
+					expect_wraparound = false;
+					wraparound.pop();
 				}
-				Utils::DumpPacketInfo("SEND", &pkt, cwnd, ssthresh, false);
-				next_seq_num += payload_size;
-				next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
-				if (next_seq_num < send_base) {
-					expect_wraparound = true;
-					s.push(next_seq_num);
-				}
-				packets_sent++;
-				first_payload_sent = true;
-				// Start timer after sending new data if it is not currently running
-				if (!rto_timer_running) {
+				send_base = pkt_ack.getACKNum();
+				send_base = send_base % (MAX_SEQUENCE_NUM + 1);
+				update_state(false);
+				ack_received = true;
+				if (outgoing_packets > 0) {
 					rto_start_time = clock();
 					rto_timer_running = true;
+				} else {
+					rto_timer_running = false;
 				}
 			} else {
-				break;
+				// Ignore packet: no operation
 			}
-		}
-		// Wait for an ACK for each packet sent
-		// If timeout, resend lost packet
-		while (packets_ackd < packets_sent) {
-			double elapsed_sto = Utils::GetSecondsElapsed(sto_start_time, clock());
-			if (elapsed_sto >= SOCKET_TIMEOUT_SEC) {
-				std::cerr << "ERROR: Socket timeout" << std::endl;
-				close(fd_sock);
-				exit(EXIT_FAILURE);
-			}
+		} else {
+			// Check for retransmission timeout (0.5 seconds); i.e., packet loss
 			double elapsed_rto = Utils::GetSecondsElapsed(rto_start_time, clock());
-			if (elapsed_rto >= RTO_SEC) { // Packet timeout detected; indicates packet loss
+			if (!lost_packet && rto_timer_running && elapsed_rto >= RTO_SEC) { 
+				// TODO: Remove debug statement
+				std::cout << ">>>>>>>>>>>>>>> PACKET LOSS <<<<<<<<<<<<<<" << std::endl;
 				update_state(true);
+				outgoing_packets = 0;
 				next_seq_num = send_base;
 				next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
+				infile.clear();
 				infile.seekg(bytes_sent); // This will move the stream position to the smallest unacked byte
-				break;
+				lost_packet = true;
 			}
-			ssize_t n_recvd = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, MSG_DONTWAIT, (struct sockaddr *)&server_addr, &server_addr_len);
-			if (n_recvd > 0) {
-				sto_start_time = clock();
-				Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
-				Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
-				if (pkt_ack.isValidACK() &&  (expect_wraparound || pkt_ack.getACKNum() > send_base)) {
-					bytes_sent += modulus25601((pkt_ack.getACKNum() - send_base));
-					if (pkt_ack.getACKNum() < send_base && pkt_ack.getACKNum() == s.top()) {
-						expect_wraparound = false;
-						s.pop();
+		}
+
+		// Send up to 2 packets for each ACK if allowed by congestion window
+		if (lost_packet || ack_received || !first_payload_sent) {
+			for (int i = 0; i < 2 && outgoing_packets * MAX_PAYLOAD_SIZE < cwnd; i++) {
+				if (infile.peek() != EOF) {
+					infile.read(payload, MAX_PAYLOAD_SIZE);
+					std::streamsize payload_size = infile.gcount();
+					Packet pkt = Packet(next_seq_num, first_payload_sent ? 0 : ++server_seq_num, first_payload_sent ? 0 : FLAG_ACK, payload, payload_size);
+					n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + payload_size, 0, (struct sockaddr *)&server_addr, server_addr_len);
+					if (n_sent == -1) {
+						std::cerr << "ERROR: Unable to send packet" << std::endl;
 					}
-					rto_start_time = clock(); // Reset timer
-					send_base = pkt_ack.getACKNum();
-					send_base = send_base % (MAX_SEQUENCE_NUM + 1);
-					packets_ackd++;
-					update_state(false);
+					Utils::DumpPacketInfo("SEND", &pkt, cwnd, ssthresh, false);
+					next_seq_num += payload_size;
+					next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
+					if (next_seq_num < send_base) {
+						expect_wraparound = true;
+						wraparound.push(next_seq_num);
+					}
+					if (!first_payload_sent) {
+						first_payload_sent = true;
+					}
+					outgoing_packets++;
+					// Start timer after sending new data if it is not currently running
+					if (!rto_timer_running) {
+						rto_start_time = clock();
+						rto_timer_running = true;
+					}
+					if (lost_packet) {
+						lost_packet = false;
+					}
 				} else {
-					// Ignore packet: no operation
+					break;
 				}
 			}
 		}
@@ -257,7 +282,7 @@ int main(int argc, char *argv[]) {
 			sto_start_time = clock();
 			Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
 			Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
-			if (pkt_ack.isValidACK()) {
+			if (pkt_ack.isValidACK() && pkt_ack.getACKNum() == pkt_fin.getSequenceNum() + 1) {
 				server_ack_num = pkt_ack.getACKNum();
 				break;
 			}
