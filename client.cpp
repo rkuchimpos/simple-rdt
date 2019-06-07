@@ -120,6 +120,7 @@ int main(int argc, char *argv[]) {
 			Utils::DumpPacketInfo("RECV", &pkt_synack, cwnd, ssthresh, false);
 			// Check if SYNACK packet was received
 			if (pkt_synack.getSYN() && pkt_synack.isValidACK()) {
+				update_state(false);
 				server_seq_num = pkt_synack.getSequenceNum();
 				server_ack_num = pkt_synack.getACKNum();
 				break;
