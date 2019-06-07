@@ -177,7 +177,9 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (pkt.getFIN()) {
-				fclose(f);
+				if (f != NULL) {
+					fclose(f);
+				}
 				Packet pkt_fin = Packet(current_sequence_num, 0, FLAG_FIN, NULL, 0);
 
 				clock_t start_t;
