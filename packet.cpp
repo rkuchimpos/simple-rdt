@@ -10,7 +10,7 @@ Packet::Packet() {
 Packet::~Packet() {
     if (payload != nullptr) {
         // TODO: Handle pointer management
-        //free(payload);
+        free(payload);
     }
 }
 
@@ -38,10 +38,10 @@ char * Packet::AssemblePacketBuffer() {
 Packet Packet::CreatePacketFromBuffer(char *packet_buffer, int packet_size) {
     Packet packet = Packet();
     memcpy(&(packet.hdr), packet_buffer, HEADER_LEN);
-    int payload_size = packet_size - HEADER_LEN;
-    packet.payload = (char *) malloc(payload_size);
-    memcpy(packet.payload, &packet_buffer[HEADER_LEN], packet_size - HEADER_LEN);
-    memcpy(&(packet.payload_size), &payload_size, sizeof(payload_size));
+    int psize = packet_size - HEADER_LEN;
+    packet.payload = (char *) malloc(psize);
+    memcpy(packet.payload, &packet_buffer[HEADER_LEN], psize);
+    memcpy(&(packet.payload_size), &psize, sizeof(psize));
 
     return packet;
 }

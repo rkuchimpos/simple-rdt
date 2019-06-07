@@ -14,6 +14,8 @@
 #include "packet.hpp"
 #include "utils.hpp"
 
+#include <stack>
+
 #define SOCKET_TIMEOUT_SEC 10
 #define RTO_SEC 0.5
 #define BASE_CWND 512
@@ -133,10 +135,13 @@ int main(int argc, char *argv[]) {
 	int file_start = server_ack_num;
 	int next_seq_num = server_ack_num;
 	int send_base = server_ack_num; // Sequence number of the oldest unacked byte
+
+	std::stack <int> s;
 	while (infile.peek() != EOF) { // While there is more data to send (including retransmissions) 
 		int packets_to_send = cwnd / MAX_PAYLOAD_SIZE;
 		int packets_sent = 0;
 		int packets_ackd = 0;
+		bool expect_wraparound = false;
 
 		// Send a maximum of `packets_to_send` number of packets
 		bool rto_timer_running = false;
@@ -152,6 +157,10 @@ int main(int argc, char *argv[]) {
 				Utils::DumpPacketInfo("SEND", &pkt, cwnd, ssthresh, false);
 				next_seq_num += payload_size;
 				next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
+				if (next_seq_num < send_base) {
+					expect_wraparound = true;
+					s.push(next_seq_num);
+				}
 				packets_sent++;
 				// Start timer after sending new data if it is not currently running
 				if (!rto_timer_running) {
@@ -184,7 +193,11 @@ int main(int argc, char *argv[]) {
 				sto_start_time = clock();
 				Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
 				Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
-				if (pkt_ack.isValidACK() && pkt_ack.getACKNum() > send_base) {
+				if (pkt_ack.isValidACK() &&  (expect_wraparound || pkt_ack.getACKNum() > send_base)) {
+					if (pkt_ack.getACKNum() < send_base && pkt_ack.getACKNum() == s.top()) {
+						expect_wraparound = false;
+						s.pop();
+					}
 					rto_start_time = clock(); // Reset timer
 					send_base = pkt_ack.getACKNum();
 					send_base = send_base % (MAX_SEQUENCE_NUM + 1);
