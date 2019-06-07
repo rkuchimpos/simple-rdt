@@ -81,6 +81,7 @@ int main(int argc, char *argv[]) {
 	int server_ack_num = 0;
 	srand(time(NULL));
 	int client_seq_num = 7859; //rand() % (MAX_SEQUENCE_NUM + 1);
+	int last_ack_received = -1;
 	
 	char buf[MAX_PACKET_SIZE]; // Buffer for incoming data
 
@@ -117,7 +118,10 @@ int main(int argc, char *argv[]) {
 		if (n_recvd > 0) {
 			sto_start_time = clock();
 			Packet pkt_synack = Packet::CreatePacketFromBuffer(buf, n_recvd);
-			Utils::DumpPacketInfo("RECV", &pkt_synack, cwnd, ssthresh, false);
+			Utils::DumpPacketInfo("RECV", &pkt_synack, cwnd, ssthresh, pkt_synack.getACKNum() == last_ack_received);
+			if (pkt_synack.isValidACK()) {
+				last_ack_received = pkt_synack.getACKNum();
+			}
 			// Check if SYNACK packet was received
 			if (pkt_synack.getSYN() && pkt_synack.isValidACK()) {
 				update_state(false);
@@ -173,7 +177,10 @@ int main(int argc, char *argv[]) {
 		if (n_recvd > 0) {
 			sto_start_time = clock();
 			Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
-			Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
+			Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, last_ack_received == pkt_ack.getACKNum());
+			if (pkt_ack.isValidACK()) {
+				last_ack_received = pkt_ack.getACKNum();
+			}
 			if (pkt_ack.isValidACK() && (expect_wraparound || pkt_ack.getACKNum() > send_base)) {
 				int prev_bytes_sent = bytes_sent;
 				bytes_sent += modulus25601((pkt_ack.getACKNum() - send_base));
@@ -269,6 +276,7 @@ int main(int argc, char *argv[]) {
 		}
 		double elapsed_rto = Utils::GetSecondsElapsed(rto_start_time, clock());
 		if (elapsed_rto >= RTO_SEC) {
+			std::cout << ">>>>>>>>>>>>>>> PACKET LOSS <<<<<<<<<<<<<<" << std::endl;
 			// Re-send FIN packet on timeout
 			n_sent = sendto(fd_sock, pkt_fin.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&server_addr, server_addr_len);
 			if (n_sent == -1) {
@@ -281,7 +289,10 @@ int main(int argc, char *argv[]) {
 		if (n_recvd > 0) {
 			sto_start_time = clock();
 			Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
-			Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
+			Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, last_ack_received == pkt_ack.getACKNum());
+			if (pkt_ack.isValidACK()) {
+				last_ack_received = pkt_ack.getACKNum();
+			}
 			if (pkt_ack.isValidACK() && pkt_ack.getACKNum() == pkt_fin.getSequenceNum() + 1) {
 				server_ack_num = pkt_ack.getACKNum();
 				break;
