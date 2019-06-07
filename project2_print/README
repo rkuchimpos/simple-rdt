@@ -1,0 +1,9 @@
+`matplotlib' is needed for running this module.
+
+
+To print out the result, run:
+
+	python printFigure.py [client log] [output file]
+
+e.g.:
+	python printFigure.py client.txt print.pdf
