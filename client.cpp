@@ -25,6 +25,14 @@
 int cwnd = BASE_CWND;
 int ssthresh = INITIAL_SSTRESH;
 
+int modulus25601(int x) {
+	int mod = x % (MAX_SEQUENCE_NUM + 1);
+	if (mod < 0) {
+		mod += MAX_SEQUENCE_NUM + 1;
+	}
+	return mod;
+}
+
 void update_state(bool packet_lost) {
 	if (packet_lost) {
 		ssthresh = std::max(cwnd / 2, 1024);
@@ -35,7 +43,7 @@ void update_state(bool packet_lost) {
 		} else { // Congestion avoidance
 			cwnd += (BASE_CWND * BASE_CWND) / cwnd;
 		}
-		cwnd = std::min(cwnd, MAX_CWND);
+		cwnd = std::min(cwnd, MAX_CWND); 
 	}
 }
 
@@ -135,14 +143,14 @@ int main(int argc, char *argv[]) {
 	infile.open(filename, std::ios::in | std::ios::binary);
 	char payload[MAX_PAYLOAD_SIZE];
 
-	int file_start = server_ack_num;
+	int bytes_sent = 0;
 	int next_seq_num = server_ack_num;
 	int send_base = server_ack_num; // Sequence number of the oldest unacked byte
 	bool first_payload_sent = false;
 
 	std::stack <int> s;
 	while (infile.peek() != EOF) { // While there is more data to send (including retransmissions) 
-		int packets_to_send = cwnd / MAX_PAYLOAD_SIZE;
+		int packets_to_send = std::ceil(cwnd / MAX_PAYLOAD_SIZE);
 		int packets_sent = 0;
 		int packets_ackd = 0;
 		bool expect_wraparound = false;
@@ -190,7 +198,7 @@ int main(int argc, char *argv[]) {
 				update_state(true);
 				next_seq_num = send_base;
 				next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
-				infile.seekg(send_base - file_start); // This will move the stream position to the smallest unacked byte
+				infile.seekg(bytes_sent); // This will move the stream position to the smallest unacked byte
 				break;
 			}
 			ssize_t n_recvd = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, MSG_DONTWAIT, (struct sockaddr *)&server_addr, &server_addr_len);
@@ -199,6 +207,7 @@ int main(int argc, char *argv[]) {
 				Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, n_recvd);
 				Utils::DumpPacketInfo("RECV", &pkt_ack, cwnd, ssthresh, false);
 				if (pkt_ack.isValidACK() &&  (expect_wraparound || pkt_ack.getACKNum() > send_base)) {
+					bytes_sent += modulus25601((pkt_ack.getACKNum() - send_base));
 					if (pkt_ack.getACKNum() < send_base && pkt_ack.getACKNum() == s.top()) {
 						expect_wraparound = false;
 						s.pop();
