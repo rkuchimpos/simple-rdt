@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
 			if (infile.peek() != EOF) {
 				infile.read(payload, MAX_PAYLOAD_SIZE);
 				std::streamsize payload_size = infile.gcount();
-				Packet pkt = Packet(next_seq_num, 0, first_payload_sent ? 0 : FLAG_ACK, payload, payload_size);
+				Packet pkt = Packet(next_seq_num, first_payload_sent ? 0: ++server_seq_num, first_payload_sent ? 0 : FLAG_ACK, payload, payload_size);
 				n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + payload_size, 0, (struct sockaddr *)&server_addr, server_addr_len);
 				if (n_sent == -1) {
 					std::cerr << "ERROR: Unable to send packet" << std::endl;
