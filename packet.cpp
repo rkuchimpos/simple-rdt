@@ -29,6 +29,7 @@ Packet::Packet(const Packet &p) {
     memcpy(&hdr, p.hdr, HEADER_LEN);
     payload_size = sizeof(*(p.GetPayload()));
     payload = malloc(payload_size);
+    memcpy(payload, p.GetPayload(), payload_size);
 }
 
 // Format packet for transmission over the network
