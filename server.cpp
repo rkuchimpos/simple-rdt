@@ -2,8 +2,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <signal.h>
 #include <time.h>
 
+#include <cstring>
 #include <iostream>
 #include <string>
 #include "packet.hpp"

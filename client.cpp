@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <cstring>
 #include <string>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -150,6 +151,7 @@ int main(int argc, char *argv[]) {
 				}
 				Utils::DumpPacketInfo("SEND", &pkt, cwnd, ssthresh, false);
 				next_seq_num += payload_size;
+				next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
 				packets_sent++;
 				// Start timer after sending new data if it is not currently running
 				if (!rto_timer_running) {
@@ -173,6 +175,7 @@ int main(int argc, char *argv[]) {
 			if (elapsed_rto >= RTO_SEC) { // Packet timeout detected; indicates packet loss
 				update_state(true);
 				next_seq_num = send_base;
+				next_seq_num = next_seq_num % (MAX_SEQUENCE_NUM + 1);
 				infile.seekg(send_base - file_start); // This will move the stream position to the smallest unacked byte
 				break;
 			}
@@ -184,6 +187,7 @@ int main(int argc, char *argv[]) {
 				if (pkt_ack.isValidACK() && pkt_ack.getACKNum() > send_base) {
 					rto_start_time = clock(); // Reset timer
 					send_base = pkt_ack.getACKNum();
+					send_base = send_base % (MAX_SEQUENCE_NUM + 1);
 					packets_ackd++;
 					update_state(false);
 				} else {
