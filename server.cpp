@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 				current_sequence_num = (pkt_synack.getSequenceNum()) % (MAX_SEQUENCE_NUM + 1);
 
 				// expect an ACK to confirm establishment of connection
-				// ASSUMPTION: no payload
+				// ASSUMPTION: payload
 				bytes_rec = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
 				Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, bytes_rec);
 				Utils::DumpPacketInfo("RECV", &pkt_ack, 0, 0, false);
@@ -109,7 +109,27 @@ int main(int argc, char *argv[]) {
 					sprintf(filename, "%d.file", file_no);
 					f = fopen(filename, "w+");
 
-					current_sequence_num = (current_sequence_num + 1) % (MAX_SEQUENCE_NUM + 1);
+					// for no payload
+					// current_sequence_num = (current_sequence_num + 1) % (MAX_SEQUENCE_NUM + 1);
+
+					// for payload
+					// redirect payload of packet to file buffer
+					memcpy(file_buf, pkt_ack.GetPayload(), bytes_rec - HEADER_LEN);
+					if (f != NULL) {
+						fwrite(file_buf, 1, bytes_rec - HEADER_LEN, f);
+					}
+
+					// send ACK
+					Packet pkt_send = Packet(current_sequence_num, pkt_ack.getSequenceNum() + bytes_rec - HEADER_LEN, FLAG_ACK, NULL, 0);
+					ssize_t bytes_sent = sendto(fd_sock, pkt_send.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
+					if (bytes_sent == -1) {
+						cerr << "ERROR: Unable to send packet" << endl;
+					}
+					Utils::DumpPacketInfo("SEND", &pkt_send, 0, 0, false);
+
+					pkt_dup = pkt_send;
+					expected_sequence_num = (pkt_ack.getSequenceNum() + bytes_rec - HEADER_LEN) % (MAX_SEQUENCE_NUM + 1);
+					// current_sequence_num stays the same
 				}
 			} else {
 				// cwnd > 1 and we lose packet, don't buffer packets after 
