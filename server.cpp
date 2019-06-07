@@ -78,10 +78,13 @@ int main(int argc, char *argv[]) {
 	// to prevent infinite fin loop
 	bool dup_fin = false;
 
+	ssize_t bytes_rec = -1;
+
 	while (true) {
 		// bytes_rec includes header
 		if (!dup_fin) {
-			ssize_t bytes_rec = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
+			bytes_rec = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
+			dup_fin = false;
 		}
 
 		if (bytes_rec > 0) {
@@ -182,8 +185,6 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (pkt.getFIN()) {
-				dup_fin = false;
-
 				if (f != NULL) {
 					fclose(f);
 				}
@@ -219,6 +220,8 @@ int main(int argc, char *argv[]) {
 							break;
 						} else if (pkt_ack.getFIN()) { // we were stuck in infinite loop because of lost ack to fin
 							dup_fin = true;
+							bytes_rec = fin_bytes;
+							expected_sequence_num = pkt_ack.getSequenceNum();
 							break;
 						}
 					}
