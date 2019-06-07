@@ -33,8 +33,9 @@ void update_state(bool packet_lost) {
 		if (cwnd < ssthresh) { // Slow start
 			cwnd += BASE_CWND;
 		} else { // Congestion avoidance
-			cwnd = (BASE_CWND * BASE_CWND) / cwnd;
+			cwnd += (BASE_CWND * BASE_CWND) / cwnd;
 		}
+		cwnd = std::min(cwnd, MAX_CWND);
 	}
 }
 
@@ -120,12 +121,14 @@ int main(int argc, char *argv[]) {
 
 	// Once we received a SYNACK packet from the server, we can respond with an ACK
 	// and start transmitting the first part of the file.
+	/*
 	Packet pkt_final_handshake_ack = Packet(server_ack_num, server_seq_num + 1, FLAG_ACK, NULL, 0);
 	n_sent = sendto(fd_sock, pkt_final_handshake_ack.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&server_addr, server_addr_len);
 	if (n_sent == -1) {
 		std::cerr << "ERROR: Unable to send packet" << std::endl;
 	}
 	Utils::DumpPacketInfo("SEND", &pkt_final_handshake_ack, cwnd, ssthresh, false);
+	*/
 
 	// Break up the file into byte chunks to wrap in a packet
 	std::ifstream infile;
@@ -135,6 +138,7 @@ int main(int argc, char *argv[]) {
 	int file_start = server_ack_num;
 	int next_seq_num = server_ack_num;
 	int send_base = server_ack_num; // Sequence number of the oldest unacked byte
+	bool first_payload_sent = false;
 
 	std::stack <int> s;
 	while (infile.peek() != EOF) { // While there is more data to send (including retransmissions) 
@@ -149,7 +153,7 @@ int main(int argc, char *argv[]) {
 			if (infile.peek() != EOF) {
 				infile.read(payload, MAX_PAYLOAD_SIZE);
 				std::streamsize payload_size = infile.gcount();
-				Packet pkt = Packet(next_seq_num, 0, 0, payload, payload_size);
+				Packet pkt = Packet(next_seq_num, 0, first_payload_sent ? 0 : FLAG_ACK, payload, payload_size);
 				n_sent = sendto(fd_sock, pkt.AssemblePacketBuffer(), HEADER_LEN + payload_size, 0, (struct sockaddr *)&server_addr, server_addr_len);
 				if (n_sent == -1) {
 					std::cerr << "ERROR: Unable to send packet" << std::endl;
@@ -162,6 +166,7 @@ int main(int argc, char *argv[]) {
 					s.push(next_seq_num);
 				}
 				packets_sent++;
+				first_payload_sent = true;
 				// Start timer after sending new data if it is not currently running
 				if (!rto_timer_running) {
 					rto_start_time = clock();
