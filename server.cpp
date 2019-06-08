@@ -29,6 +29,14 @@ void signal_handler(int signum) {
 	exit(0);
 }
 
+int modulus25601(int x) {
+	int mod = x % (MAX_SEQUENCE_NUM + 1);
+	if (mod < 0) {
+		mod += MAX_SEQUENCE_NUM + 1;
+	}
+	return mod;
+}
+
 int main(int argc, char *argv[]) {
 	// Parse command-line argument for port number
 	if (argc < 2) {
@@ -80,11 +88,14 @@ int main(int argc, char *argv[]) {
 
 	ssize_t bytes_rec = -1;
 
+	bool fin_timer_running = false;
+
+	clock_t fin_timer = clock();
+
 	while (true) {
 		// bytes_rec includes header
 		if (!dup_fin) {
 			bytes_rec = recvfrom(fd_sock, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
-			dup_fin = false;
 		}
 
 		if (bytes_rec > 0) {
@@ -153,7 +164,7 @@ int main(int argc, char *argv[]) {
 				}
 
 				// no payload (FIN FLAG)
-				if (bytes_rec - HEADER_LEN == 0) {
+				if (pkt.getFIN()) {
 					// send ACK
 					Packet pkt_send = Packet(current_sequence_num, pkt.getSequenceNum() + 1, FLAG_ACK, NULL, 0);
 					ssize_t bytes_sent = sendto(fd_sock, pkt_send.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
@@ -185,6 +196,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (pkt.getFIN()) {
+				dup_fin = false;
 				if (f != NULL) {
 					fclose(f);
 				}
@@ -195,9 +207,19 @@ int main(int argc, char *argv[]) {
 
 				// to force sending right away
 				start_t = clock() - (0.5 * (double) CLOCKS_PER_SEC);
+				if (!fin_timer_running) {
+					fin_timer = clock();
+					fin_timer_running = true;
+				}
 
 				// while the client connection is alive (no ACK pkt received)
 				do {
+					double fin_time_elapsed = Utils::GetSecondsElapsed(fin_timer, clock());
+					if (fin_time_elapsed >= 2.0) {
+						expected_sequence_num = modulus25601(expected_sequence_num - 1);
+						fin_timer_running = false;
+						break;
+					}
 					// wait for timeout before resending packet
 					time_elapsed = (double) (clock() - start_t) / (double) CLOCKS_PER_SEC;
 					if (time_elapsed > 0.5) {
@@ -215,7 +237,7 @@ int main(int argc, char *argv[]) {
 						// do nothing
 					} else {
 						Packet pkt_ack = Packet::CreatePacketFromBuffer(buf, fin_bytes);
-						if (pkt_ack.getSequenceNum() == expected_sequence_num && pkt_ack.getACKNum() == current_sequence_num + 1) {
+						if (pkt_ack.getSequenceNum() == expected_sequence_num && pkt_ack.getACKNum() == (current_sequence_num + 1) % (MAX_SEQUENCE_NUM + 1)) {
 							Utils::DumpPacketInfo("RECV", &pkt_ack, 0, 0, false);
 							break;
 						} else if (pkt_ack.getFIN()) { // we were stuck in infinite loop because of lost ack to fin

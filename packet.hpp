@@ -27,7 +27,6 @@ class Packet {
         Packet();
         ~Packet();
         Packet(unsigned short seq_num, unsigned short ack_num, unsigned char flags, char *payload, int payload_size);
-        Packet(const Packet &p);
         // Format packet for transmission over the network
         char * AssemblePacketBuffer();
         static Packet CreatePacketFromBuffer(char *packet_buffer, int packet_size);

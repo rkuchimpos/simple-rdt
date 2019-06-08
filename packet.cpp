@@ -24,14 +24,6 @@ Packet::Packet(unsigned short seq_num, unsigned short ack_num, unsigned char fla
     memcpy(this->payload, payload, payload_size);
 }
 
-// copy constructor
-Packet::Packet(const Packet &p) {
-    memcpy(&hdr, p.hdr, HEADER_LEN);
-    payload_size = sizeof(*(p.GetPayload()));
-    payload = malloc(payload_size);
-    memcpy(payload, p.GetPayload(), payload_size);
-}
-
 // Format packet for transmission over the network
 char * Packet::AssemblePacketBuffer() {
     unsigned packet_size = std::min(HEADER_LEN + payload_size, MAX_PACKET_SIZE);
