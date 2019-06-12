@@ -1,0 +1,17 @@
+NAME: Jesse Catalan, Ricardo Kuchimpos
+EMAIL: jessecatalan77@gmail.com, rkuchimpos@gmail.com
+ID: 204785152, 704827423
+
+------------
+  Workload
+------------
+
+We divided the workload between the client and server code for the most part. Jesse worked on the 
+server code while Ricardo worked on the client code. We worked together to write a packet class and
+to access a packet's header and payload. Ricardo also implemented a utility class for helper 
+functions.
+
+In testing our code, we helped each other find bugs in each others' code and made small adjustments
+to our opposite source codes.
+
+We worked on the report together.
