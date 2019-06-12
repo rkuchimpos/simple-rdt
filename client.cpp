@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 	int server_seq_num = 0;
 	int server_ack_num = 0;
 	srand(time(NULL));
-	int client_seq_num = 7859; //rand() % (MAX_SEQUENCE_NUM + 1);
+	int client_seq_num = rand() % (MAX_SEQUENCE_NUM + 1);
 	int last_ack_received = -1;
 	
 	char buf[MAX_PACKET_SIZE]; // Buffer for incoming data

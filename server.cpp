@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
 			// if SYN flag set (new connection)
 			if (pkt.getSYN()) {
 				// create and send SYNACK packet
-				Packet pkt_synack = Packet(17809/*rand() % (MAX_SEQUENCE_NUM + 1)*/, pkt.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
+				Packet pkt_synack = Packet(rand() % (MAX_SEQUENCE_NUM + 1), pkt.getSequenceNum() + 1, FLAG_ACK | FLAG_SYN, NULL, 0);
 				ssize_t bytes_sent = sendto(fd_sock, pkt_synack.AssemblePacketBuffer(), HEADER_LEN, 0, (struct sockaddr *)&client_addr, client_addr_len);
 				if (bytes_sent == -1) {
 					cerr << "ERROR: Unable to send packet" << endl;
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 					if (bytes_sent == -1) {
 						cerr << "ERROR: Unable to send packet" << endl;
 					}
-					Utils::DumpPacketInfo("SEND", &pkt_dup, 0, 0, false);
+					Utils::DumpPacketInfo("SEND", &pkt_dup, 0, 0, true);
 
 					continue;
 				}
